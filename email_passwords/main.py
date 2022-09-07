@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
+import json
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 # Password Generator Project
 import random
@@ -28,37 +29,41 @@ def generate_pass():
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 
 
-dane = open("email_password", "a")
-dane.close()
-dane = open("email_password", "r")
-
-dane_f = dane.readlines()
-if len(dane_f) > 0:
-    my_email = dane_f[-1]
-    my_email = my_email.split("|")
-    if len(my_email) > 1:
-        my_email = my_email[1].strip()
-    else:
-        my_email = ""
-else:
+dane_f = open("email_password.json", "a")
+dane_f.close()
+dane_f = open("email_password.json", "r")
+try:
+    dane = json.load(dane_f)
+except json.decoder.JSONDecodeError:
+    dane = {}
     my_email = ""
-dane.close()
-dane = open("email_password", "a")
+else:
+    all_emails = [rest["Email"] for key, rest in dane.items()]
+    my_email = all_emails[-1]
+dane_f.close()
 
 
 def add_password():
-    print("hi")
     if link.get().strip() != "" and e_user.get().strip() != "" and password.get().strip() != "":
-        info = f'These are the details entered\nEmail : {e_user.get().strip()}\nPassword : {password.get().strip()}\nIs it ok to save?'
-        is_ok = messagebox.askokcancel(link.get().strip(), info)
+        info = f'These are the details entered\nEmail : {e_user.get()}\nPassword : {password.get()}\nIs it ok to save?'
+        is_ok = messagebox.askokcancel(link.get(), info)
         if is_ok:
-            dane.write(f"{link.get().strip()} | {e_user.get().strip()} | {password.get().strip()}\n")
+            with open("email_password.json", "w") as dane_j:
+                dane.update({link.get(): {"Email": e_user.get(), "Password": password.get()}})
+                json.dump(dane, dane_j, indent=4)
             link.delete(0, END)
             password.delete(0, END)
     else:
         messagebox.showinfo("Ops", "Fields can't be empty")
 
 
+def search_data():
+    if link.get() in dane:
+        email_pass = dane[link.get()]
+        message = f'Email : {email_pass["Email"]}\nPassword : {email_pass["Password"]}'
+        messagebox.showinfo(title="Search", message=message)
+    else:
+        messagebox.showinfo(title="Search", message="No password found to this website")
 # ---------------------------- GUI SETUP ------------------------------- #
 
 
@@ -75,18 +80,20 @@ email = Label(text="Email/Username")
 email.grid(row=2, column=0)
 p_word = Label(text="Password")
 p_word.grid(row=3, column=0)
-link = Entry(width=39)
-link.grid(row=1, column=1, columnspan=2)
-e_user = Entry(width=39)
+link = Entry(width=25)
+link.grid(row=1, column=1,)
+e_user = Entry(width=50)
 e_user.grid(row=2, columnspan=2, column=1)
-password = Entry(width=21)
+password = Entry(width=25)
 password.grid(row=3, column=1)
 adding = Button(text="Add", width=36, command=add_password)
 adding.grid(row=4, column=1, columnspan=2)
-g_pass = Button(text="Generate Password", command=generate_pass)
+g_pass = Button(text="Generate Password", command=generate_pass, width=20)
 g_pass.grid(row=3, column=2)
+search = Button(text="Search", command=search_data, width=20)
+search.grid(column=2, row=1)
 link.focus()
 e_user.insert(0, my_email)
 
 window.mainloop()
-dane.close()
+
